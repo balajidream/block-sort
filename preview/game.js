@@ -193,7 +193,7 @@ function flyBlocks(source, destination, colors, onFinish) {
       { transform: "translate(0, 0) scale(1)", offset: 0 },
       { transform: `translate(${targetX * .54}px, ${targetY * .22 - 70}px) scale(1.11) rotate(${index % 2 ? -4 : 4}deg)`, offset: .48 },
       { transform: `translate(${targetX}px, ${targetY}px) scale(1) rotate(0deg)`, offset: 1 },
-    ], { duration: 390, delay: index * 46, easing: "cubic-bezier(.23, .9, .36, 1)", fill: "forwards" });
+    ], { duration: 520, delay: index * 58, easing: "cubic-bezier(.23, .9, .36, 1)", fill: "forwards" });
     animation.onfinish = () => {
       flying.remove();
       completed++;
