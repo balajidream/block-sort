@@ -1,0 +1,14 @@
+{
+    "name": "BlockSort.Editor",
+    "rootNamespace": "BlockSort.EditorTools",
+    "references": ["BlockSort.Runtime"],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

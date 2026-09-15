@@ -1,34 +1,54 @@
-# Block Sort
+# Block Sort — Unity 6
 
-A portrait, touch-first color sorting puzzle: move matching top block runs between wooden slots, pop completed stacks, and clear the shelf.
+Portrait hybrid-casual color sort. Open this **repository root** in Unity Hub (Unity 6 LTS, `6000.0`).
 
-## Play the preview
+## Open once
 
-The included browser preview is a complete, responsive first-playable slice with splash, home, level grid, 12 playable levels, undo, one extra-slot booster, confetti, coins, and local progress:
+1. Unity Hub → **Open** → this folder (the one with `Assets/`, `Packages/`, `ProjectSettings/`).
+2. Install **iOS Build Support** if you plan to ship to a device.
+3. Wait for Package Manager to import URP and uGUI.
+4. Unity will run `Tools → Block Sort → Complete Project Setup` on first editor load (or run that menu yourself).
+5. Open `Assets/_Project/Scenes/Boot.unity` and press **Play**.
 
-```bash
-python3 -m http.server 41731 --directory .
-```
+If Play shows a blank camera, the runtime bootstrap still creates the app (`BlockSortApp`). Press Play on any scene.
 
-Open `http://127.0.0.1:41731/preview/` on a phone-sized viewport or mobile device on the same network.
+## Layout
 
-## Unity source
+| Path | What lives there |
+| --- | --- |
+| `Assets/_Project/Code/Gameplay` | Pure board rules (`Board`, `Slot`, tap session) |
+| `Assets/_Project/Code/Levels` | Level definitions, catalog, reverse generator, JSON import |
+| `Assets/_Project/Code/Presentation` | Portrait UI shell that plays the puzzle |
+| `Assets/_Project/Code/Meta` | Coins and cleared-level save |
+| `Assets/_Project/Code/Core` | Tiny event bus / game states |
+| `Assets/_Project/Data/Levels/World01` | Baked ScriptableObject levels (created by the setup menu) |
+| `Assets/_Project/Resources/Levels/world-01.json` | Source of truth for the 12 hand levels |
+| `Assets/_Project/Scenes` | `Boot`, `Meta`, `Game` |
+| `Assets/_Project/Art/Generated` | Blender PNG + GLB cubes, slot, button |
+| `Assets/_Project/Editor` | Setup, bake, generate menus |
+| `preview/` | Web prototype used to tune feel (not required to Play in Unity) |
 
-The primary game source is a Unity 6 portrait project:
+## Levels
 
-1. Open this repository with Unity Hub using Unity `6000.0.0f1` or a compatible Unity 6 LTS editor.
-2. Let Unity import packages and generated art.
-3. Play or build for a portrait Android/iOS target.
+World 01 is 12 authored puzzles (same layouts as the web preview). They import from JSON into `LevelDefinition` assets:
 
-The core, view-independent puzzle model is in `Assets/_Project/Code/Gameplay/BlockSortBoard.cs`; it has NUnit edit-mode coverage in `Assets/_Project/Tests/EditMode`.
-Three `LevelDefinition` assets under `Assets/_Project/Data/Levels` demonstrate the data-driven level format.
+- `Tools → Block Sort → Bake 12 Hand Levels From JSON`
+- `Tools → Block Sort → Generate Extra Practice Levels (13-30)` uses reverse generation (solved board, then legal reverse moves) so extras stay solvable.
 
-## Blender art
+Create more worlds as extra `LevelCatalog` assets and add them to `WorldDatabase`.
 
-The source-controlled generator at `tools/blender/generate_2d_assets.py` creates the rounded candy blocks, embossed icon plates, wood slot, and button ornament as transparent PNG sprites plus GLB source exports:
+## iOS
+
+After the project opens cleanly:
+
+1. File → Build Settings → iOS → Switch Platform.
+2. Player Settings already target portrait, IL2CPP, ARM64, bundle id `com.blocksort.game`.
+3. Build, open the Xcode project, pick your team, run on a device.
+
+## Blender
 
 ```bash
 blender --background --python tools/blender/generate_2d_assets.py
 ```
 
-Generated files are placed in `Assets/_Project/Art/Generated/` and are deliberately lightweight for mobile use.
+Writes sprites and GLBs into `Assets/_Project/Art/Generated/`.

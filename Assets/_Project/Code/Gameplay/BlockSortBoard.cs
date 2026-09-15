@@ -90,6 +90,12 @@ namespace BlockSort.Gameplay
             }
         }
 
+        public void AddEmptySlot()
+        {
+            var capacity = Slots.Count > 0 ? Slots[0].Capacity : 4;
+            ((List<Slot>)Slots).Add(new Slot(capacity));
+        }
+
         public void ClearCompletedSlots()
         {
             foreach (var slot in Slots.Where(slot => slot.IsComplete)) slot.Cubes.Clear();

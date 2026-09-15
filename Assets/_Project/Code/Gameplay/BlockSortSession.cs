@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using BlockSort.Levels;
 
 namespace BlockSort.Gameplay
 {
@@ -14,11 +13,12 @@ namespace BlockSort.Gameplay
         public int UndoCharges { get; private set; } = 3;
         public int MoveCount { get; private set; }
         public event Action<int> SlotSelected;
+        public event Action<int> SelectionCleared;
         public event Action<int, int, MoveResult> MoveApplied;
         public event Action<int> SlotCleared;
         public event Action LevelWon;
 
-        public BlockSortSession(LevelDefinition definition) => Board = definition.CreateBoard();
+        public BlockSortSession(Board board) => Board = board;
 
         public void TapSlot(int slotIndex)
         {
@@ -30,8 +30,18 @@ namespace BlockSort.Gameplay
                 return;
             }
 
-            if (SelectedSlot == slotIndex) { SelectedSlot = -1; return; }
-            if (!Board.CanMove(SelectedSlot, slotIndex)) { SelectedSlot = -1; return; }
+            if (SelectedSlot == slotIndex)
+            {
+                SelectedSlot = -1;
+                SelectionCleared?.Invoke();
+                return;
+            }
+            if (!Board.CanMove(SelectedSlot, slotIndex))
+            {
+                SelectedSlot = -1;
+                SelectionCleared?.Invoke();
+                return;
+            }
 
             _undoSnapshots.Push(Board.Snapshot());
             var source = SelectedSlot;
@@ -53,6 +63,13 @@ namespace BlockSort.Gameplay
             Board.Restore(_undoSnapshots.Pop());
             UndoCharges--;
             SelectedSlot = -1;
+            SelectionCleared?.Invoke();
+            return true;
+        }
+
+        public bool TryAddExtraSlot()
+        {
+            Board.AddEmptySlot();
             return true;
         }
     }

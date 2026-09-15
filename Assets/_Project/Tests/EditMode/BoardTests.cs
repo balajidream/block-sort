@@ -50,10 +50,12 @@ namespace BlockSort.Tests.EditMode
         }
 
         [Test]
-        public void IsSolved_AcceptsEmptyOrCompleteSlots()
+        public void AddEmptySlot_AppendsPlayableTube()
         {
-            var board = new Board(new[] { new Slot(4, new[] { CubeColor.Violet, CubeColor.Violet, CubeColor.Violet, CubeColor.Violet }), new Slot(4) });
-            Assert.That(board.IsSolved(), Is.True);
+            var board = new Board(new[] { new Slot(4, new[] { CubeColor.Red }), new Slot(4) });
+            board.AddEmptySlot();
+            Assert.That(board.Slots.Count, Is.EqualTo(3));
+            Assert.That(board.Slots[2].IsEmpty, Is.True);
         }
     }
 }
