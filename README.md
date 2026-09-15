@@ -4,13 +4,13 @@ A portrait, touch-first color sorting puzzle: move matching top block runs betwe
 
 ## Play the preview
 
-The included browser preview is a complete, responsive first-playable slice with splash, home, level grid, 12 playable levels, undo, one extra-slot booster, move trails, confetti, coins, and local progress:
+The included browser preview is a complete, responsive first-playable slice with splash, home, level grid, 12 playable levels, undo, one extra-slot booster, confetti, coins, and local progress. It loads the Blender-rendered block sprites directly:
 
 ```bash
-python3 -m http.server 41731 --directory preview
+python3 -m http.server 41731 --directory .
 ```
 
-Open `http://127.0.0.1:41731` on a phone-sized viewport or mobile device on the same network.
+Open `http://127.0.0.1:41731/preview/` on a phone-sized viewport or mobile device on the same network.
 
 ## Unity source
 

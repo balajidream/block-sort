@@ -161,7 +161,6 @@ function move(from, to) {
   ui.hint.textContent = "Flowing blocks...";
   sourceElement.classList.add("moving-source");
   destinationElement.classList.add("receiving");
-  animateTrail(from, to, COLORS[moved[0]][0]);
   flyBlocks(sourceElement, destinationElement, moved, () => {
     source.splice(source.length - count, count);
     dest.push(...moved);
@@ -186,6 +185,10 @@ function flyBlocks(source, destination, colors, onFinish) {
     flying.className = `${block.className.replace("held", "")} flying-block`;
     flying.textContent = block.textContent;
     flying.style.cssText = `left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px`;
+    flying.style.backgroundImage = getComputedStyle(block).backgroundImage;
+    flying.style.backgroundSize = "136%";
+    flying.style.backgroundPosition = "center";
+    flying.style.color = "transparent";
     document.body.append(flying);
     const targetX = end.left + (end.width - rect.width) / 2 - rect.left;
     const targetY = end.bottom - 12 - rect.height * (destination.querySelectorAll(".block").length + index + 1) - rect.top;
@@ -199,22 +202,6 @@ function flyBlocks(source, destination, colors, onFinish) {
       completed++;
       if (completed === colors.length) onFinish();
     };
-  });
-}
-function animateTrail(from, to, color) {
-  requestAnimationFrame(() => {
-    const slots = ui.board.querySelectorAll(".slot");
-    const a = slots[from].getBoundingClientRect(), b = slots[to].getBoundingClientRect(), area = ui.board.getBoundingClientRect();
-    const dx = b.left + b.width / 2 - (a.left + a.width / 2), dy = b.top + b.height / 2 - (a.top + 30);
-    const trail = document.createElement("i");
-    trail.className = "trail";
-    trail.style.left = `${a.left + a.width / 2 - area.left}px`;
-    trail.style.top = `${a.top + 25 - area.top}px`;
-    trail.style.height = `${Math.hypot(dx, dy)}px`;
-    trail.style.transform = `rotate(${Math.atan2(dx, -dy)}rad)`;
-    trail.style.background = color === "lime" ? "linear-gradient(#fffcc1,#9bec4b,transparent)" : "";
-    ui.board.append(trail);
-    setTimeout(() => trail.remove(), 430);
   });
 }
 function clearComplete(index) {

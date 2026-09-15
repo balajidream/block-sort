@@ -123,12 +123,12 @@ def ui_button():
         button.data.materials.append(mat)
 
 
-def set_camera():
-    # The framed art sits between z=0 and z=4; this keeps cube bottoms in frame too.
-    bpy.ops.object.camera_add(location=(0, -9, 1.7))
+def set_camera(ortho_scale=5.1, target_height=1.7):
+    """Frame each exported sprite tightly enough to use directly as a UI texture."""
+    bpy.ops.object.camera_add(location=(0, -9, target_height))
     camera = bpy.context.object
     camera.data.type = "ORTHO"
-    camera.data.ortho_scale = 5.1
+    camera.data.ortho_scale = ortho_scale
     camera.rotation_euler = (1.5708, 0, 0)
     bpy.context.scene.camera = camera
     bpy.ops.object.light_add(type="AREA", location=(-3, -4, 6))
@@ -164,19 +164,19 @@ for color_name, hex_value in COLORS.items():
     clear()
     rounded_cube(color_name, rgb(hex_value))
     icon(ICONS[list(COLORS).index(color_name)])
-    set_camera()
+    set_camera(1.35, .52)
     render(f"block_{color_name}")
     export_active(f"block_{color_name}")
 
 clear()
 wooden_slot()
-set_camera()
+set_camera(4.75, 1.9)
 render("wooden_slot")
 export_active("wooden_slot")
 
 clear()
 ui_button()
-set_camera()
+set_camera(1.9, .22)
 render("ui_button")
 export_active("ui_button")
 
