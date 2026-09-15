@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#28130f" />
+    <title>Block Sort</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main id="app" aria-live="polite">
+      <section id="splash" class="screen splash-screen">
+        <div class="sparkles">✦ ✧ ✦</div>
+        <div class="logo-cubes" aria-hidden="true"><i>◆</i><i>★</i><i>▲</i><i>●</i></div>
+        <h1>BLOCK<br /><span>SORT</span></h1>
+        <p>Tap to begin</p>
+      </section>
+
+      <section id="home" class="screen home-screen hidden">
+        <header class="topbar">
+          <button class="round-button" id="soundButton" aria-label="Toggle sound">♪</button>
+          <div class="coin-pill"><b>●</b><span id="homeCoins">120</span></div>
+          <button class="round-button" id="workshopButton" aria-label="Open workshop">⌂</button>
+        </header>
+        <div class="home-title">
+          <div class="wood-sign">SORT THE<br /><strong>COLORS!</strong></div>
+          <p>Clear the shelf. Find your flow.</p>
+        </div>
+        <div class="showcase" aria-hidden="true">
+          <div class="mini-slot"><span class="block red">▲</span><span class="block amber">●</span><span class="block violet">★</span></div>
+          <div class="mini-slot"><span class="block teal">☘</span><span class="block red">▲</span><span class="block amber">●</span></div>
+          <div class="mini-slot"><span class="block lime">◆</span><span class="block violet">★</span><span class="block teal">☘</span></div>
+        </div>
+        <button id="playButton" class="play-button">PLAY <small>LEVEL <span id="nextLevel">1</span></small></button>
+        <button id="levelsButton" class="text-button">LEVELS <span>›</span></button>
+        <p class="daily"><b>✦</b> Daily reward ready</p>
+      </section>
+
+      <section id="levels" class="screen levels-screen hidden">
+        <header class="topbar"><button class="round-button back-button">‹</button><h2>LEVELS</h2><div class="coin-pill"><b>●</b><span id="levelsCoins">120</span></div></header>
+        <div id="levelGrid" class="level-grid"></div>
+        <button class="text-button back-button">‹ BACK</button>
+      </section>
+
+      <section id="game" class="screen game-screen hidden">
+        <header class="game-topbar">
+          <button class="round-button home-button" aria-label="Home">⌂</button>
+          <div class="level-label">LEVEL <strong id="levelNumber">1</strong><span id="moves">0 MOVES</span></div>
+          <div class="coin-pill"><b>●</b><span id="gameCoins">120</span></div>
+        </header>
+        <p id="hint" class="hint">Tap a stack to pick it up</p>
+        <div id="board" class="board" aria-label="Block sort game board"></div>
+        <div class="game-actions">
+          <button id="undoButton" class="action-button"><span>↶</span>UNDO <b id="undoCount">3</b></button>
+          <button id="extraButton" class="action-button extra"><span>＋</span>EXTRA SLOT <b>1</b></button>
+        </div>
+      </section>
+
+      <section id="complete" class="modal hidden" role="dialog" aria-modal="true">
+        <div class="modal-card">
+          <div class="burst">✦ ✧ ✦</div>
+          <h2>COLOR<br /><span>PERFECT!</span></h2>
+          <p>LEVEL <b id="completeLevel">1</b> CLEARED</p>
+          <div class="reward"><span>●</span><b id="rewardAmount">30</b></div>
+          <div id="stars" class="stars">★ ★ ★</div>
+          <button id="nextButton" class="play-button">NEXT LEVEL</button>
+          <button id="doubleButton" class="double-button">▶ 2× REWARD</button>
+        </div>
+      </section>
+      <section id="workshop" class="modal hidden" role="dialog" aria-modal="true">
+        <div class="modal-card workshop-card">
+          <button class="close-modal" aria-label="Close">×</button>
+          <h2>YOUR<br /><span>WORKSHOP</span></h2>
+          <div class="workshop-scene"><span>🪴</span><i></i><span>🏮</span></div>
+          <p>Earn coins to brighten your shelf.</p>
+          <button class="text-button close-modal">BACK TO HOME</button>
+        </div>
+      </section>
+    </main>
+    <script src="game.js"></script>
+  </body>
+</html>

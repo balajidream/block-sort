@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5097535ea1c1aa7429dac0f639db1fe6, type: 3}
+  m_Name: Level-001
+  m_EditorClassIdentifier:
+  levelNumber: 1
+  slotCount: 3
+  emptySlots: 1
+  colorCount: 2
+  cubesPerColor: 4
+  serializedLayout: 0
+  - 0
+  - 1
+  - 0
+  - 1
+  - -1
+  - 1
+  - 0
+  - 1
+  - 0
+  - -1
+  moveLimit: 0
+  modifiers: []
