@@ -24,6 +24,31 @@ const state = {
   cleared: JSON.parse(localStorage.getItem("block-sort-cleared") || "[]"),
   coins: Number(localStorage.getItem("block-sort-coins") || 120),
   board: [], selected: null, history: [], undos: 3, extraUsed: false, moves: 0,
+  animating: false, justMoved: null, soundOn: true,
+};
+
+const Sfx = {
+  context: null,
+  play(frequency, duration, type = "sine", volume = 0.045, sweep = 1) {
+    if (!state.soundOn) return;
+    try {
+      this.context ||= new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = this.context.createOscillator();
+      const gain = this.context.createGain();
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, this.context.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(Math.max(40, frequency * sweep), this.context.currentTime + duration);
+      gain.gain.setValueAtTime(volume, this.context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.context.currentTime + duration);
+      oscillator.connect(gain).connect(this.context.destination);
+      oscillator.start(); oscillator.stop(this.context.currentTime + duration);
+    } catch (_) { /* Audio is optional on restricted browsers. */ }
+  },
+  pick() { this.play(520, .07, "sine", .035, 1.25); },
+  drop() { this.play(180, .12, "triangle", .07, .68); },
+  undo() { this.play(330, .11, "sine", .035, .55); },
+  invalid() { this.play(115, .12, "square", .025, .75); },
+  complete() { this.play(620, .25, "sine", .065, 1.7); setTimeout(() => this.play(940, .18, "sine", .045, 1.3), 90); },
 };
 
 function saveProgress() {
@@ -56,10 +81,11 @@ function openLevels() {
 function startLevel(number) {
   state.level = number;
   state.board = LEVELS[number - 1].board.map(slot => [...slot]);
-  state.selected = null; state.history = []; state.undos = 3; state.extraUsed = false; state.moves = 0;
+  state.selected = null; state.history = []; state.undos = 3; state.extraUsed = false; state.moves = 0; state.animating = false; state.justMoved = null;
   ui.levelNumber.textContent = number;
   ui.hint.textContent = "Tap a stack to pick it up";
   ui.undoCount.textContent = state.undos;
+  ui.extraButton.style.opacity = "1";
   refreshCoins(); renderBoard(); screen("game");
 }
 function topRun(slot) {
@@ -82,7 +108,9 @@ function renderBoard() {
     element.onclick = () => tapSlot(index, element);
     slot.forEach((color, blockIndex) => {
       const block = document.createElement("span");
-      block.className = `block ${COLORS[color][0]} ${state.selected === index && blockIndex >= slot.length - topRun(slot) ? "held" : ""}`;
+      const isHeld = state.selected === index && blockIndex >= slot.length - topRun(slot);
+      const justArrived = state.justMoved && state.justMoved.to === index && blockIndex >= slot.length - state.justMoved.count;
+      block.className = `block ${COLORS[color][0]} ${isHeld ? "held" : ""} ${justArrived ? "arriving" : ""}`;
       block.textContent = COLORS[color][1];
       element.append(block);
     });
@@ -91,9 +119,12 @@ function renderBoard() {
   ui.moves.textContent = `${state.moves} MOVE${state.moves === 1 ? "" : "S"}`;
 }
 function tapSlot(index, element) {
+  if (state.animating) return;
   if (state.selected === null) {
     if (!state.board[index].length) return invalid(element);
     state.selected = index;
+    Sfx.pick();
+    navigator.vibrate?.(8);
     ui.hint.textContent = `Holding ${topRun(state.board[index])} ${COLORS[state.board[index].at(-1)][0]} block${topRun(state.board[index]) > 1 ? "s" : ""}`;
     renderBoard();
     return;
@@ -113,6 +144,8 @@ function tapSlot(index, element) {
 }
 function invalid(element) {
   if (!element) return;
+  Sfx.invalid();
+  navigator.vibrate?.(18);
   element.classList.remove("invalid");
   void element.offsetWidth;
   element.classList.add("invalid");
@@ -121,15 +154,52 @@ function move(from, to) {
   state.history.push(state.board.map(slot => [...slot]));
   const source = state.board[from], dest = state.board[to];
   const count = Math.min(topRun(source), 4 - dest.length);
-  const moved = source.splice(source.length - count, count);
-  state.board[to].push(...moved);
-  state.selected = null; state.moves++;
+  const moved = source.slice(source.length - count);
+  const slots = ui.board.querySelectorAll(".slot");
+  const sourceElement = slots[from], destinationElement = slots[to];
+  state.selected = null; state.animating = true;
+  ui.hint.textContent = "Flowing blocks...";
+  sourceElement.classList.add("moving-source");
+  destinationElement.classList.add("receiving");
   animateTrail(from, to, COLORS[moved[0]][0]);
-  renderBoard();
-  ui.hint.textContent = "Nice move — keep sorting!";
-  if (state.board[to].length === 4 && state.board[to].every(color => color === state.board[to][0])) {
-    setTimeout(() => clearComplete(to), 220);
-  }
+  flyBlocks(sourceElement, destinationElement, moved, () => {
+    source.splice(source.length - count, count);
+    dest.push(...moved);
+    state.moves++;
+    state.justMoved = { to, count };
+    state.animating = false;
+    Sfx.drop();
+    navigator.vibrate?.(14);
+    renderBoard();
+    ui.hint.textContent = "Nice move — keep sorting!";
+    setTimeout(() => { state.justMoved = null; }, 520);
+    if (dest.length === 4 && dest.every(color => color === dest[0])) setTimeout(() => clearComplete(to), 260);
+  });
+}
+function flyBlocks(source, destination, colors, onFinish) {
+  const sourceBlocks = [...source.querySelectorAll(".block")].slice(-colors.length);
+  const start = source.getBoundingClientRect(), end = destination.getBoundingClientRect();
+  let completed = 0;
+  sourceBlocks.forEach((block, index) => {
+    const rect = block.getBoundingClientRect();
+    const flying = document.createElement("span");
+    flying.className = `${block.className.replace("held", "")} flying-block`;
+    flying.textContent = block.textContent;
+    flying.style.cssText = `left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px`;
+    document.body.append(flying);
+    const targetX = end.left + (end.width - rect.width) / 2 - rect.left;
+    const targetY = end.bottom - 12 - rect.height * (destination.querySelectorAll(".block").length + index + 1) - rect.top;
+    const animation = flying.animate([
+      { transform: "translate(0, 0) scale(1)", offset: 0 },
+      { transform: `translate(${targetX * .54}px, ${targetY * .22 - 70}px) scale(1.11) rotate(${index % 2 ? -4 : 4}deg)`, offset: .48 },
+      { transform: `translate(${targetX}px, ${targetY}px) scale(1) rotate(0deg)`, offset: 1 },
+    ], { duration: 390, delay: index * 46, easing: "cubic-bezier(.23, .9, .36, 1)", fill: "forwards" });
+    animation.onfinish = () => {
+      flying.remove();
+      completed++;
+      if (completed === colors.length) onFinish();
+    };
+  });
 }
 function animateTrail(from, to, color) {
   requestAnimationFrame(() => {
@@ -151,6 +221,8 @@ function clearComplete(index) {
   const slot = ui.board.querySelectorAll(".slot")[index];
   slot.classList.add("clearing");
   ui.hint.textContent = "Perfect stack! ✦";
+  Sfx.complete();
+  navigator.vibrate?.([12, 40, 20]);
   confetti(slot);
   setTimeout(() => {
     state.board[index] = [];
@@ -172,12 +244,14 @@ function confetti(slot) {
 function undo() {
   if (!state.history.length || !state.undos) return;
   state.board = state.history.pop(); state.undos--; state.moves = Math.max(0, state.moves - 1); state.selected = null;
+  Sfx.undo();
   ui.undoCount.textContent = state.undos; ui.hint.textContent = "Move rewound";
   renderBoard();
 }
 function extraSlot() {
   if (state.extraUsed) { ui.hint.textContent = "Extra slot already used"; return; }
   state.board.push([]); state.extraUsed = true; ui.extraButton.style.opacity = ".45";
+  Sfx.play(410, .14, "sine", .05, 1.45);
   ui.hint.textContent = "An empty slot appeared!";
   renderBoard();
 }
@@ -201,6 +275,10 @@ ui.nextButton.onclick = () => { ui.complete.classList.add("hidden"); startLevel(
 ui.doubleButton.onclick = () => { state.coins += LEVELS[Math.max(0, state.level - 2)].reward; saveProgress(); refreshCoins(); ui.doubleButton.textContent = "REWARD CLAIMED"; };
 ui.workshopButton.onclick = () => ui.workshop.classList.remove("hidden");
 document.querySelectorAll("#workshop .close-modal").forEach(button => button.onclick = () => ui.workshop.classList.add("hidden"));
-ui.soundButton.onclick = () => { ui.soundButton.textContent = ui.soundButton.textContent === "♪" ? "×" : "♪"; };
+ui.soundButton.onclick = () => {
+  state.soundOn = !state.soundOn;
+  ui.soundButton.textContent = state.soundOn ? "♪" : "×";
+  if (state.soundOn) Sfx.pick();
+};
 ui.splash.onclick = openHome;
 setTimeout(openHome, 2200);
