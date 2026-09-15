@@ -24,7 +24,7 @@ const state = {
   cleared: JSON.parse(localStorage.getItem("block-sort-cleared") || "[]"),
   coins: Number(localStorage.getItem("block-sort-coins") || 120),
   board: [], selected: null, history: [], undos: 3, extraUsed: false, moves: 0,
-  animating: false, justMoved: null, soundOn: true,
+  justMoved: null, soundOn: true, clearing: new Set(),
 };
 
 const Sfx = {
@@ -81,9 +81,10 @@ function openLevels() {
 function startLevel(number) {
   state.level = number;
   state.board = LEVELS[number - 1].board.map(slot => [...slot]);
-  state.selected = null; state.history = []; state.undos = 3; state.extraUsed = false; state.moves = 0; state.animating = false; state.justMoved = null;
+  state.selected = null; state.history = []; state.undos = 3; state.extraUsed = false; state.moves = 0; state.justMoved = null; state.clearing = new Set();
+  document.querySelectorAll(".flying-block").forEach(node => node.remove());
   ui.levelNumber.textContent = number;
-  ui.hint.textContent = "Tap a stack to pick it up";
+  ui.hint.textContent = "Tap a stack, then another.";
   ui.undoCount.textContent = state.undos;
   ui.extraButton.style.opacity = "1";
   refreshCoins(); renderBoard(); screen("game");
@@ -119,24 +120,21 @@ function renderBoard() {
   ui.moves.textContent = `${state.moves} MOVE${state.moves === 1 ? "" : "S"}`;
 }
 function tapSlot(index, element) {
-  if (state.animating) return;
   if (state.selected === null) {
     if (!state.board[index].length) return invalid(element);
     state.selected = index;
     Sfx.pick();
     navigator.vibrate?.(8);
-    ui.hint.textContent = `Holding ${topRun(state.board[index])} ${COLORS[state.board[index].at(-1)][0]} block${topRun(state.board[index]) > 1 ? "s" : ""}`;
     renderBoard();
     return;
   }
   if (state.selected === index) {
-    state.selected = null; ui.hint.textContent = "Tap a stack to pick it up"; renderBoard(); return;
+    state.selected = null; renderBoard(); return;
   }
   const from = state.selected;
   if (!canMove(from, index)) {
     invalid(element);
     state.selected = null;
-    ui.hint.textContent = "That stack cannot take those blocks";
     renderBoard();
     return;
   }
@@ -151,67 +149,55 @@ function invalid(element) {
   element.classList.add("invalid");
 }
 function move(from, to) {
-  state.history.push(state.board.map(slot => [...slot]));
+  const slots = ui.board.querySelectorAll(".slot");
+  const sourceElement = slots[from], destinationElement = slots[to];
   const source = state.board[from], dest = state.board[to];
   const count = Math.min(topRun(source), 4 - dest.length);
   const moved = source.slice(source.length - count);
-  const slots = ui.board.querySelectorAll(".slot");
-  const sourceElement = slots[from], destinationElement = slots[to];
-  state.selected = null; state.animating = true;
-  ui.hint.textContent = "Flowing blocks...";
-  sourceElement.classList.add("moving-source");
-  destinationElement.classList.add("receiving");
-  flyBlocks(sourceElement, destinationElement, moved, () => {
-    source.splice(source.length - count, count);
-    dest.push(...moved);
-    state.moves++;
-    state.justMoved = { to, count };
-    state.animating = false;
-    Sfx.drop();
-    navigator.vibrate?.(14);
-    renderBoard();
-    ui.hint.textContent = "Nice move — keep sorting!";
-    setTimeout(() => { state.justMoved = null; }, 520);
-    if (dest.length === 4 && dest.every(color => color === dest[0])) setTimeout(() => clearComplete(to), 260);
-  });
+  const flyFrom = [...sourceElement.querySelectorAll(".block")].slice(-count).map(block => block.getBoundingClientRect());
+  const destRect = destinationElement.getBoundingClientRect();
+  const destHeightBefore = dest.length;
+  state.history.push(state.board.map(slot => [...slot]));
+  source.splice(source.length - count, count);
+  dest.push(...moved);
+  state.selected = null;
+  state.moves++;
+  state.justMoved = { to, count };
+  Sfx.drop();
+  navigator.vibrate?.(10);
+  flyGhosts(flyFrom, destRect, destHeightBefore, moved);
+  renderBoard();
+  requestAnimationFrame(() => ui.board.querySelectorAll(".slot")[to]?.classList.add("receiving"));
+  setTimeout(() => { if (state.justMoved?.to === to) state.justMoved = null; }, 180);
+  if (dest.length === 4 && dest.every(color => color === dest[0])) clearComplete(to);
 }
-function flyBlocks(source, destination, colors, onFinish) {
-  const sourceBlocks = [...source.querySelectorAll(".block")].slice(-colors.length);
-  const start = source.getBoundingClientRect(), end = destination.getBoundingClientRect();
-  let completed = 0;
-  sourceBlocks.forEach((block, index) => {
-    const rect = block.getBoundingClientRect();
+function flyGhosts(starts, destRect, destHeightBefore, colors) {
+  starts.forEach((rect, index) => {
     const flying = document.createElement("span");
-    flying.className = `${block.className.replace("held", "")} flying-block`;
-    flying.textContent = block.textContent;
+    flying.className = `block ${COLORS[colors[index]][0]} flying-block`;
+    flying.textContent = COLORS[colors[index]][1];
     flying.style.cssText = `left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px`;
     document.body.append(flying);
-    const targetX = end.left + (end.width - rect.width) / 2 - rect.left;
-    const targetY = end.bottom - 12 - rect.height * (destination.querySelectorAll(".block").length + index + 1) - rect.top;
-    const animation = flying.animate([
-      { transform: "translate(0, 0) scale(1)", offset: 0 },
-      { transform: `translate(${targetX * .54}px, ${targetY * .22 - 70}px) scale(1.11) rotate(${index % 2 ? -4 : 4}deg)`, offset: .48 },
-      { transform: `translate(${targetX}px, ${targetY}px) scale(1) rotate(0deg)`, offset: 1 },
-    ], { duration: 520, delay: index * 58, easing: "cubic-bezier(.23, .9, .36, 1)", fill: "forwards" });
-    animation.onfinish = () => {
-      flying.remove();
-      completed++;
-      if (completed === colors.length) onFinish();
-    };
+    const targetX = destRect.left + (destRect.width - rect.width) / 2 - rect.left;
+    const targetY = destRect.bottom - 12 - rect.height * (destHeightBefore + index + 1) - rect.top;
+    flying.animate([
+      { transform: "translate(0,0) scale(1)", opacity: 1, offset: 0 },
+      { transform: `translate(${targetX * .5}px, ${targetY * .3 - 36}px) scale(1.05)`, opacity: .9, offset: .45 },
+      { transform: `translate(${targetX}px, ${targetY}px) scale(1)`, opacity: 0, offset: 1 },
+    ], { duration: 170, delay: index * 18, easing: "cubic-bezier(.2,.85,.32,1)", fill: "forwards" }).onfinish = () => flying.remove();
   });
 }
 function clearComplete(index) {
   const slot = ui.board.querySelectorAll(".slot")[index];
-  slot.classList.add("clearing");
-  ui.hint.textContent = "Perfect stack! ✦";
   Sfx.complete();
-  navigator.vibrate?.([12, 40, 20]);
-  confetti(slot);
-  setTimeout(() => {
-    state.board[index] = [];
-    renderBoard();
-    if (state.board.every(stack => !stack.length)) completeLevel();
-  }, 390);
+  navigator.vibrate?.([8, 24, 12]);
+  if (slot) {
+    slot.classList.add("clearing");
+    confetti(slot);
+  }
+  state.board[index] = [];
+  renderBoard();
+  if (state.board.every(stack => !stack.length)) completeLevel();
 }
 function confetti(slot) {
   const origin = slot.getBoundingClientRect(), area = ui.board.getBoundingClientRect();
@@ -228,14 +214,14 @@ function undo() {
   if (!state.history.length || !state.undos) return;
   state.board = state.history.pop(); state.undos--; state.moves = Math.max(0, state.moves - 1); state.selected = null;
   Sfx.undo();
-  ui.undoCount.textContent = state.undos; ui.hint.textContent = "Move rewound";
+  ui.undoCount.textContent = state.undos;
+  document.querySelectorAll(".flying-block").forEach(node => node.remove());
   renderBoard();
 }
 function extraSlot() {
-  if (state.extraUsed) { ui.hint.textContent = "Extra slot already used"; return; }
+  if (state.extraUsed) return;
   state.board.push([]); state.extraUsed = true; ui.extraButton.style.opacity = ".45";
   Sfx.play(410, .14, "sine", .05, 1.45);
-  ui.hint.textContent = "An empty slot appeared!";
   renderBoard();
 }
 function completeLevel() {
