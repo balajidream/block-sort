@@ -185,10 +185,6 @@ function flyBlocks(source, destination, colors, onFinish) {
     flying.className = `${block.className.replace("held", "")} flying-block`;
     flying.textContent = block.textContent;
     flying.style.cssText = `left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px`;
-    flying.style.backgroundImage = getComputedStyle(block).backgroundImage;
-    flying.style.backgroundSize = "136%";
-    flying.style.backgroundPosition = "center";
-    flying.style.color = "transparent";
     document.body.append(flying);
     const targetX = end.left + (end.width - rect.width) / 2 - rect.left;
     const targetY = end.bottom - 12 - rect.height * (destination.querySelectorAll(".block").length + index + 1) - rect.top;

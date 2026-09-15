@@ -4,7 +4,7 @@ A portrait, touch-first color sorting puzzle: move matching top block runs betwe
 
 ## Play the preview
 
-The included browser preview is a complete, responsive first-playable slice with splash, home, level grid, 12 playable levels, undo, one extra-slot booster, confetti, coins, and local progress. It loads the Blender-rendered block sprites directly:
+The included browser preview is a complete, responsive first-playable slice with splash, home, level grid, 12 playable levels, undo, one extra-slot booster, confetti, coins, and local progress:
 
 ```bash
 python3 -m http.server 41731 --directory .
