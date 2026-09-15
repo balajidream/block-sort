@@ -171,7 +171,7 @@ function confetti(slot) {
 }
 function undo() {
   if (!state.history.length || !state.undos) return;
-  state.board = state.history.pop(); state.undos--; state.selected = null;
+  state.board = state.history.pop(); state.undos--; state.moves = Math.max(0, state.moves - 1); state.selected = null;
   ui.undoCount.textContent = state.undos; ui.hint.textContent = "Move rewound";
   renderBoard();
 }
@@ -203,4 +203,4 @@ ui.workshopButton.onclick = () => ui.workshop.classList.remove("hidden");
 document.querySelectorAll("#workshop .close-modal").forEach(button => button.onclick = () => ui.workshop.classList.add("hidden"));
 ui.soundButton.onclick = () => { ui.soundButton.textContent = ui.soundButton.textContent === "♪" ? "×" : "♪"; };
 ui.splash.onclick = openHome;
-setTimeout(openHome, 1300);
+setTimeout(openHome, 2200);
