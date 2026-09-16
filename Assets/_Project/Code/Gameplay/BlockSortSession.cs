@@ -13,7 +13,7 @@ namespace BlockSort.Gameplay
         public int UndoCharges { get; private set; } = 3;
         public int MoveCount { get; private set; }
         public event Action<int> SlotSelected;
-        public event Action<int> SelectionCleared;
+        public event Action SelectionCleared;
         public event Action<int, int, MoveResult> MoveApplied;
         public event Action<int> SlotCleared;
         public event Action LevelWon;
