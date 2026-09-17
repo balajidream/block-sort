@@ -5,6 +5,7 @@ using BlockSort.Levels;
 using BlockSort.Meta;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 namespace BlockSort.Presentation
@@ -114,21 +115,25 @@ namespace BlockSort.Presentation
 
         void EnsureEventSystem()
         {
-            if (FindFirstObjectByType<EventSystem>() != null)
+            var existing = FindFirstObjectByType<EventSystem>();
+            if (existing == null)
             {
-                return;
+                var system = new GameObject("EventSystem");
+                existing = system.AddComponent<EventSystem>();
             }
 
-            var system = new GameObject("EventSystem");
-            system.AddComponent<EventSystem>();
-            system.AddComponent<StandaloneInputModule>();
+            if (existing.GetComponent<InputSystemUIInputModule>() == null)
+            {
+                existing.gameObject.AddComponent<InputSystemUIInputModule>();
+            }
         }
 
         void BuildUi()
         {
             _canvas = new GameObject("Canvas").AddComponent<Canvas>();
             _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            _canvas.gameObject.AddComponent<GraphicRaycaster>();
+            var raycaster = _canvas.gameObject.AddComponent<GraphicRaycaster>();
+            raycaster.ignoreReversedGraphics = true;
             var scaler = _canvas.gameObject.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1080, 1920);
@@ -153,7 +158,7 @@ namespace BlockSort.Presentation
             Header(_game, out _gameCoins, true);
             _levelNumber = Label(_game, "LEVEL 1", 42, new Vector2(0, 760));
             _moves = Label(_game, "0 MOVES", 28, new Vector2(0, 700));
-            _boardRoot = Panel("Board", _game, new Vector2(0, 40), new Vector2(980, 1180));
+            _boardRoot = Panel("Board", _game, new Vector2(0, 40), new Vector2(980, 1180), false);
             Button(_game, "UNDO", new Vector2(-220, -780), new Vector2(280, 90), Undo);
             _undoCount = Label(_game, "3", 24, new Vector2(-90, -730));
             Button(_game, "EXTRA", new Vector2(220, -780), new Vector2(280, 90), ExtraSlot);
@@ -255,7 +260,7 @@ namespace BlockSort.Presentation
             {
                 var column = i % columns;
                 var row = i / columns;
-                var x = (column - (columns - 1) * 0.5f) * 230;
+                var x = (column - (columns - 1) * 0.5f) * 240;
                 var y = 280 - row * 520;
                 DrawSlot(i, new Vector2(x, y));
             }
@@ -265,18 +270,27 @@ namespace BlockSort.Presentation
         {
             var slot = _session.Board.Slots[index];
             var selected = _session.SelectedSlot == index;
-            var panel = Panel($"Slot{index}", _boardRoot, position, new Vector2(180, 460));
-            panel.GetComponent<Image>().color = selected ? new Color(0.72f, 0.38f, 0.16f) : new Color(0.42f, 0.18f, 0.10f);
-            var captured = index;
-            panel.gameObject.AddComponent<Button>().onClick.AddListener(() => _session.TapSlot(captured));
+            var hit = Panel($"Slot{index}", _boardRoot, position, new Vector2(220, 500), true);
+            var hitImage = hit.GetComponent<Image>();
+            hitImage.color = new Color(1f, 1f, 1f, 0.01f);
+            hitImage.alphaHitTestMinimumThreshold = 0f;
+            var visual = Panel("Tube", hit, Vector2.zero, new Vector2(180, 460), false);
+            visual.GetComponent<Image>().color = selected ? new Color(0.82f, 0.44f, 0.18f) : new Color(0.42f, 0.18f, 0.10f);
+            visual.localScale = selected ? Vector3.one * 1.04f : Vector3.one;
+            var lift = selected ? 22f : 0f;
             for (var c = 0; c < slot.Cubes.Count; c++)
             {
                 var color = slot.Cubes[c];
-                var block = Panel($"Cube{c}", panel, new Vector2(0, -170 + c * 95), new Vector2(150, 86));
+                var block = Panel($"Cube{c}", visual, new Vector2(0, -170 + c * 95 + lift), new Vector2(150, 86), false);
                 block.GetComponent<Image>().color = CubeColors[(int)color];
-                var icon = Label(block, CubeIcons[(int)color], 40, Vector2.zero);
+                var icon = Label(block, CubeIcons[(int)color], 40, Vector2.zero, new Vector2(150, 86));
                 icon.color = new Color(1f, 0.96f, 0.85f);
             }
+
+            var tap = hit.gameObject.AddComponent<TubeTapTarget>();
+            tap.SlotIndex = index;
+            tap.Session = _session;
+            tap.Visual = visual;
         }
 
         void Undo()
@@ -330,25 +344,26 @@ namespace BlockSort.Presentation
             return panel;
         }
 
-        static Image Image(string name, Transform parent, Color color)
+        static Image Image(string name, Transform parent, Color color, bool raycastTarget = false)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
             var image = go.AddComponent<Image>();
             image.color = color;
+            image.raycastTarget = raycastTarget;
             return image;
         }
 
-        static RectTransform Panel(string name, Transform parent, Vector2 anchored, Vector2 size)
+        static RectTransform Panel(string name, Transform parent, Vector2 anchored, Vector2 size, bool raycastTarget = false)
         {
-            var image = Image(name, parent, Wood);
+            var image = Image(name, parent, Wood, raycastTarget);
             var rect = image.rectTransform;
             rect.sizeDelta = size;
             rect.anchoredPosition = anchored;
             return rect;
         }
 
-        static Text Label(Transform parent, string value, int size, Vector2 anchored)
+        static Text Label(Transform parent, string value, int size, Vector2 anchored, Vector2? box = null)
         {
             var go = new GameObject("Label");
             go.transform.SetParent(parent, false);
@@ -357,6 +372,7 @@ namespace BlockSort.Presentation
             text.alignment = TextAnchor.MiddleCenter;
             text.color = new Color(1f, 0.93f, 0.62f);
             text.fontSize = size;
+            text.raycastTarget = false;
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             if (text.font == null)
             {
@@ -364,21 +380,21 @@ namespace BlockSort.Presentation
             }
 
             var rect = text.rectTransform;
-            rect.sizeDelta = new Vector2(900, 120);
+            rect.sizeDelta = box ?? new Vector2(900, 120);
             rect.anchoredPosition = anchored;
             return text;
         }
 
         static Button Button(Transform parent, string label, Vector2 anchored, Vector2 size, UnityEngine.Events.UnityAction action)
         {
-            var image = Image(label, parent, new Color(0.92f, 0.42f, 0.16f));
+            var image = Image(label, parent, new Color(0.92f, 0.42f, 0.16f), true);
             var rect = image.rectTransform;
             rect.sizeDelta = size;
             rect.anchoredPosition = anchored;
             var button = image.gameObject.AddComponent<Button>();
+            button.transition = Selectable.Transition.ColorTint;
             button.onClick.AddListener(action);
-            var text = Label(image.transform, label, 36, Vector2.zero);
-            text.rectTransform.sizeDelta = size;
+            Label(image.transform, label, 36, Vector2.zero, size);
             return button;
         }
 

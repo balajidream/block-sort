@@ -1,7 +1,7 @@
 {
     "name": "BlockSort.Runtime",
     "rootNamespace": "BlockSort",
-    "references": ["UnityEngine.UI"],
+    "references": ["UnityEngine.UI", "Unity.InputSystem"],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

@@ -38,8 +38,13 @@ namespace BlockSort.Gameplay
             }
             if (!Board.CanMove(SelectedSlot, slotIndex))
             {
-                SelectedSlot = -1;
-                SelectionCleared?.Invoke();
+                if (Board.Slots[slotIndex].IsEmpty)
+                {
+                    return;
+                }
+
+                SelectedSlot = slotIndex;
+                SlotSelected?.Invoke(slotIndex);
                 return;
             }
 
