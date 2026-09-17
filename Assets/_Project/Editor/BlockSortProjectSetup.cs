@@ -16,7 +16,7 @@ namespace BlockSort.EditorTools
         const string BootScene = "Assets/_Project/Scenes/Boot.unity";
         const string MetaScene = "Assets/_Project/Scenes/Meta.unity";
         const string GameScene = "Assets/_Project/Scenes/Game.unity";
-        const string PrefKey = "BlockSort.ProjectSetup.v2";
+        const string PrefKey = "BlockSort.ProjectSetup.v3";
 
         [InitializeOnLoadMethod]
         static void AutoRun()
@@ -199,8 +199,20 @@ namespace BlockSort.EditorTools
                 pipeline = created as RenderPipelineAsset;
             }
 
-            if (pipeline != null)
+            if (pipeline != null && renderer != null)
             {
+                var serialized = new SerializedObject(pipeline);
+                var rendererList = serialized.FindProperty("m_RendererDataList");
+                rendererList.arraySize = 1;
+                rendererList.GetArrayElementAtIndex(0).objectReferenceValue = renderer;
+                var defaultIndex = serialized.FindProperty("m_DefaultRendererIndex");
+                if (defaultIndex != null)
+                {
+                    defaultIndex.intValue = 0;
+                }
+
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+                EditorUtility.SetDirty(pipeline);
                 GraphicsSettings.defaultRenderPipeline = pipeline;
                 QualitySettings.renderPipeline = pipeline;
             }
