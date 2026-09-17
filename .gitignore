@@ -19,3 +19,6 @@ Recordings/
 .DS_Store
 __pycache__/
 *.pyc
+
+# Coplay is installed locally (Unity UPM git uses /usr/bin/git, blocked by Xcode license)
+Packages/com.coplaydev.coplay/
