@@ -47,6 +47,7 @@ namespace BlockSort.Presentation
         Text _reward;
         BlockSortSession _session;
         LevelDefinition _current;
+        GameJuice _juice;
         int _level = 1;
         bool _extraUsed;
         readonly List<int> _cleared = new();
@@ -139,6 +140,7 @@ namespace BlockSort.Presentation
             scaler.referenceResolution = new Vector2(1080, 1920);
             scaler.matchWidthOrHeight = 0.5f;
             _canvas.transform.SetParent(transform, false);
+            _juice = GameJuice.Create(transform, _canvas.transform as RectTransform);
             var bg = Image("Background", _canvas.transform, new Color(0.16f, 0.07f, 0.05f));
             Stretch(bg.rectTransform);
 
@@ -146,29 +148,29 @@ namespace BlockSort.Presentation
             Header(_home, out _homeCoins);
             Label(_home, "SORT THE COLORS", 72, new Vector2(0, 420));
             _nextLevel = Label(_home, "PLAY LEVEL 1", 40, new Vector2(0, 80));
-            Button(_home, "PLAY", new Vector2(0, -80), new Vector2(560, 140), () => StartLevel(_level));
-            Button(_home, "LEVELS", new Vector2(0, -260), new Vector2(360, 90), ShowLevels);
+            MakeButton(_home, "PLAY", new Vector2(0, -80), new Vector2(560, 140), () => StartLevel(_level));
+            MakeButton(_home, "LEVELS", new Vector2(0, -260), new Vector2(360, 90), ShowLevels);
 
             _levels = Screen("Levels");
             Header(_levels, out _levelsCoins);
             Label(_levels, "LEVELS", 56, new Vector2(0, 640));
-            Button(_levels, "BACK", new Vector2(0, -740), new Vector2(280, 80), () => Show(_home));
+            MakeButton(_levels, "BACK", new Vector2(0, -740), new Vector2(280, 80), () => Show(_home));
 
             _game = Screen("Game");
             Header(_game, out _gameCoins, true);
             _levelNumber = Label(_game, "LEVEL 1", 42, new Vector2(0, 760));
             _moves = Label(_game, "0 MOVES", 28, new Vector2(0, 700));
             _boardRoot = Panel("Board", _game, new Vector2(0, 40), new Vector2(980, 1180), false);
-            Button(_game, "UNDO", new Vector2(-220, -780), new Vector2(280, 90), Undo);
+            MakeButton(_game, "UNDO", new Vector2(-220, -780), new Vector2(280, 90), Undo);
             _undoCount = Label(_game, "3", 24, new Vector2(-90, -730));
-            Button(_game, "EXTRA", new Vector2(220, -780), new Vector2(280, 90), ExtraSlot);
-            Button(_game, "HOME", new Vector2(0, -900), new Vector2(220, 70), () => Show(_home));
+            MakeButton(_game, "EXTRA", new Vector2(220, -780), new Vector2(280, 90), ExtraSlot);
+            MakeButton(_game, "HOME", new Vector2(0, -900), new Vector2(220, 70), () => Show(_home));
 
             _complete = Screen("Complete");
             Label(_complete, "COLOR PERFECT", 64, new Vector2(0, 240));
             _completeLevel = Label(_complete, "LEVEL 1", 36, new Vector2(0, 80));
             _reward = Label(_complete, "+30", 48, new Vector2(0, -40));
-            Button(_complete, "NEXT", new Vector2(0, -240), new Vector2(480, 120), NextLevel);
+            MakeButton(_complete, "NEXT", new Vector2(0, -240), new Vector2(480, 120), NextLevel);
         }
 
         void Header(RectTransform parent, out Text coins, bool compact = false)
@@ -214,7 +216,7 @@ namespace BlockSort.Presentation
                 var locked = number > _level;
                 var label = locked ? "X" : _cleared.Contains(number) ? "OK" : number.ToString();
                 var captured = number;
-                Button(_levels, label, new Vector2(x, y), new Vector2(180, 140), () =>
+                MakeButton(_levels, label, new Vector2(x, y), new Vector2(180, 140), () =>
                 {
                     if (captured <= _level)
                     {
@@ -230,10 +232,14 @@ namespace BlockSort.Presentation
             _level = number;
             _extraUsed = false;
             _session = new BlockSortSession(_current.CreateBoard());
-            _session.SlotSelected += _ => RenderBoard();
+            _session.SlotSelected += _ =>
+            {
+                _juice.Play("tap");
+                RenderBoard();
+            };
             _session.SelectionCleared += RenderBoard;
-            _session.MoveApplied += (_, _, _) => RenderBoard();
-            _session.SlotCleared += _ => RenderBoard();
+            _session.MoveApplied += OnMoveApplied;
+            _session.SlotCleared += OnSlotCleared;
             _session.LevelWon += OnWin;
             _levelNumber.text = $"LEVEL {number}";
             Show(_game);
@@ -275,16 +281,39 @@ namespace BlockSort.Presentation
             hitImage.color = new Color(1f, 1f, 1f, 0.01f);
             hitImage.alphaHitTestMinimumThreshold = 0f;
             var visual = Panel("Tube", hit, Vector2.zero, new Vector2(180, 460), false);
-            visual.GetComponent<Image>().color = selected ? new Color(0.82f, 0.44f, 0.18f) : new Color(0.42f, 0.18f, 0.10f);
+            var tubeImage = visual.GetComponent<Image>();
+            var wood = _juice.Sprite("Art/wooden_slot");
+            if (wood != null)
+            {
+                tubeImage.sprite = wood;
+                tubeImage.preserveAspect = true;
+                tubeImage.color = selected ? Color.white : new Color(1f, 0.92f, 0.86f, 1f);
+            }
+            else
+            {
+                tubeImage.color = selected ? new Color(0.82f, 0.44f, 0.18f) : new Color(0.42f, 0.18f, 0.10f);
+            }
+
             visual.localScale = selected ? Vector3.one * 1.04f : Vector3.one;
             var lift = selected ? 22f : 0f;
             for (var c = 0; c < slot.Cubes.Count; c++)
             {
                 var color = slot.Cubes[c];
-                var block = Panel($"Cube{c}", visual, new Vector2(0, -170 + c * 95 + lift), new Vector2(150, 86), false);
-                block.GetComponent<Image>().color = CubeColors[(int)color];
-                var icon = Label(block, CubeIcons[(int)color], 40, Vector2.zero, new Vector2(150, 86));
-                icon.color = new Color(1f, 0.96f, 0.85f);
+                var block = Panel($"Cube{c}", visual, new Vector2(0, -170 + c * 95 + lift), new Vector2(150, 92), false);
+                var blockImage = block.GetComponent<Image>();
+                var candy = _juice.Sprite($"Art/block_{color.ToString().ToLowerInvariant()}");
+                if (candy != null)
+                {
+                    blockImage.sprite = candy;
+                    blockImage.preserveAspect = true;
+                    blockImage.color = Color.white;
+                }
+                else
+                {
+                    blockImage.color = CubeColors[(int)color];
+                    var icon = Label(block, CubeIcons[(int)color], 40, Vector2.zero, new Vector2(150, 86));
+                    icon.color = new Color(1f, 0.96f, 0.85f);
+                }
             }
 
             var tap = hit.gameObject.AddComponent<TubeTapTarget>();
@@ -293,10 +322,36 @@ namespace BlockSort.Presentation
             tap.Visual = visual;
         }
 
+        Vector2 SlotAnchor(int index)
+        {
+            var count = _session.Board.Slots.Count;
+            var columns = Mathf.Min(4, count);
+            var column = index % columns;
+            var row = index / columns;
+            var x = (column - (columns - 1) * 0.5f) * 240;
+            var y = 280 - row * 520;
+            return new Vector2(x, y + 40f);
+        }
+
+        void OnMoveApplied(int _, int to, MoveResult result)
+        {
+            _juice.Play("pour");
+            RenderBoard();
+            _juice.Burst(SlotAnchor(to), CubeColors[(int)result.Color], 16);
+        }
+
+        void OnSlotCleared(int index)
+        {
+            _juice.Play("clear");
+            RenderBoard();
+            _juice.Burst(SlotAnchor(index), new Color(1f, 0.86f, 0.32f), 28);
+        }
+
         void Undo()
         {
             if (_session != null && _session.Undo())
             {
+                _juice.Play("undo");
                 RenderBoard();
             }
         }
@@ -310,11 +365,14 @@ namespace BlockSort.Presentation
 
             _extraUsed = true;
             _session.TryAddExtraSlot();
+            _juice.Play("tap");
             RenderBoard();
         }
 
         void OnWin()
         {
+            _juice.Play("win");
+            _juice.Burst(new Vector2(0f, 120f), new Color(1f, 0.84f, 0.28f), 42);
             if (!_cleared.Contains(_current.levelNumber))
             {
                 _cleared.Add(_current.levelNumber);
@@ -385,9 +443,16 @@ namespace BlockSort.Presentation
             return text;
         }
 
-        static Button Button(Transform parent, string label, Vector2 anchored, Vector2 size, UnityEngine.Events.UnityAction action)
+        Button MakeButton(Transform parent, string label, Vector2 anchored, Vector2 size, UnityEngine.Events.UnityAction action)
         {
             var image = Image(label, parent, new Color(0.92f, 0.42f, 0.16f), true);
+            var chrome = _juice != null ? _juice.Sprite("Art/ui_button") : null;
+            if (chrome != null)
+            {
+                image.sprite = chrome;
+                image.color = new Color(1f, 0.9f, 0.82f, 1f);
+            }
+
             var rect = image.rectTransform;
             rect.sizeDelta = size;
             rect.anchoredPosition = anchored;
