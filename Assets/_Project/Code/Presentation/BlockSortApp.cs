@@ -161,6 +161,14 @@ namespace BlockSort.Presentation
             _levelNumber = Label(_game, "LEVEL 1", 42, new Vector2(0, 760));
             _moves = Label(_game, "0 MOVES", 28, new Vector2(0, 700));
             _boardRoot = Panel("Board", _game, new Vector2(0, 40), new Vector2(980, 1180), false);
+            var boardImage = _boardRoot.GetComponent<Image>();
+            var panel = _juice.Sprite("Art/ui_panel", new Vector4(48, 48, 48, 48));
+            if (panel != null)
+            {
+                boardImage.sprite = panel;
+                boardImage.type = UnityEngine.UI.Image.Type.Sliced;
+                boardImage.color = new Color(1f, 0.95f, 0.9f, 0.92f);
+            }
             MakeButton(_game, "UNDO", new Vector2(-220, -780), new Vector2(280, 90), Undo);
             _undoCount = Label(_game, "3", 24, new Vector2(-90, -730));
             MakeButton(_game, "EXTRA", new Vector2(220, -780), new Vector2(280, 90), ExtraSlot);
@@ -280,38 +288,39 @@ namespace BlockSort.Presentation
             var hitImage = hit.GetComponent<Image>();
             hitImage.color = new Color(1f, 1f, 1f, 0.01f);
             hitImage.alphaHitTestMinimumThreshold = 0f;
-            var visual = Panel("Tube", hit, Vector2.zero, new Vector2(180, 460), false);
+            var visual = Panel("Tube", hit, Vector2.zero, new Vector2(176, 470), false);
             var tubeImage = visual.GetComponent<Image>();
             var wood = _juice.Sprite("Art/wooden_slot");
             if (wood != null)
             {
                 tubeImage.sprite = wood;
-                tubeImage.preserveAspect = true;
-                tubeImage.color = selected ? Color.white : new Color(1f, 0.92f, 0.86f, 1f);
+                tubeImage.preserveAspect = false;
+                tubeImage.type = UnityEngine.UI.Image.Type.Simple;
+                tubeImage.color = selected ? Color.white : new Color(0.92f, 0.86f, 0.8f, 1f);
             }
             else
             {
                 tubeImage.color = selected ? new Color(0.82f, 0.44f, 0.18f) : new Color(0.42f, 0.18f, 0.10f);
             }
 
-            visual.localScale = selected ? Vector3.one * 1.04f : Vector3.one;
-            var lift = selected ? 22f : 0f;
+            visual.localScale = selected ? Vector3.one * 1.05f : Vector3.one;
+            var lift = selected ? 16f : 0f;
             for (var c = 0; c < slot.Cubes.Count; c++)
             {
                 var color = slot.Cubes[c];
-                var block = Panel($"Cube{c}", visual, new Vector2(0, -170 + c * 95 + lift), new Vector2(150, 92), false);
+                var block = Panel($"Cube{c}", visual, new Vector2(0, -148 + c * 88 + lift), new Vector2(118, 80), false);
                 var blockImage = block.GetComponent<Image>();
                 var candy = _juice.Sprite($"Art/block_{color.ToString().ToLowerInvariant()}");
                 if (candy != null)
                 {
                     blockImage.sprite = candy;
-                    blockImage.preserveAspect = true;
+                    blockImage.preserveAspect = false;
                     blockImage.color = Color.white;
                 }
                 else
                 {
                     blockImage.color = CubeColors[(int)color];
-                    var icon = Label(block, CubeIcons[(int)color], 40, Vector2.zero, new Vector2(150, 86));
+                    var icon = Label(block, CubeIcons[(int)color], 40, Vector2.zero, new Vector2(118, 80));
                     icon.color = new Color(1f, 0.96f, 0.85f);
                 }
             }
@@ -445,12 +454,17 @@ namespace BlockSort.Presentation
 
         Button MakeButton(Transform parent, string label, Vector2 anchored, Vector2 size, UnityEngine.Events.UnityAction action)
         {
-            var image = Image(label, parent, new Color(0.92f, 0.42f, 0.16f), true);
-            var chrome = _juice != null ? _juice.Sprite("Art/ui_button") : null;
+            var image = Image(label, parent, Color.white, true);
+            var chrome = _juice != null ? _juice.Sprite("Art/ui_button", new Vector4(48, 40, 48, 40)) : null;
             if (chrome != null)
             {
                 image.sprite = chrome;
-                image.color = new Color(1f, 0.9f, 0.82f, 1f);
+                image.type = UnityEngine.UI.Image.Type.Sliced;
+                image.color = Color.white;
+            }
+            else
+            {
+                image.color = new Color(0.92f, 0.42f, 0.16f);
             }
 
             var rect = image.rectTransform;

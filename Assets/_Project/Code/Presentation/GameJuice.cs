@@ -51,9 +51,10 @@ namespace BlockSort.Presentation
             group.interactable = false;
         }
 
-        public Sprite Sprite(string resourceName)
+        public Sprite Sprite(string resourceName, Vector4 border = default)
         {
-            if (_sprites.TryGetValue(resourceName, out var cached) && cached != null)
+            var key = resourceName + border;
+            if (_sprites.TryGetValue(key, out var cached) && cached != null)
             {
                 return cached;
             }
@@ -64,8 +65,15 @@ namespace BlockSort.Presentation
                 return null;
             }
 
-            var sprite = UnityEngine.Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f);
-            _sprites[resourceName] = sprite;
+            var sprite = UnityEngine.Sprite.Create(
+                texture,
+                new Rect(0, 0, texture.width, texture.height),
+                new Vector2(0.5f, 0.5f),
+                100f,
+                0,
+                SpriteMeshType.FullRect,
+                border);
+            _sprites[key] = sprite;
             return sprite;
         }
 
